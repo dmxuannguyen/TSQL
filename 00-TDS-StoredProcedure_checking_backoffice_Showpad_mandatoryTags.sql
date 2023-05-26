@@ -12,7 +12,7 @@
 
 
 -- drop table if exists #IsContent
---- select ast_id	, ast_displayName , astF_idHash /*, lt_list_tagOnly , astC_allListTagsOnly */ into #IsContent from #t where astC_isContentCount = 1 
+--- select ast_id	, ast_displayName , astF_idHash , lt_list_tagOnly , astC_allListTagsOnly  into #IsContent from #t where astC_isContentCount = 1 
 
 -- select * from #IsContent
 
@@ -315,6 +315,14 @@ from #allShowpad m
 		inner join #IsContent c on ( m.[id] = c.astF_idHash)
 where Tag IN  ( select distinct astSgmtC_segment from rfd.vw_DIM_ASSETS_SEGMENT where astSgmt_segmentId <> -1 )
 group by Tag
+/*
+Tag	nb
+Defence	2951
+Enterprise	1643
+Ground & Aviation	772
+Public Security & Identity	448
+Space	257
+*/
 
 
 /* 2 - MARKET SUB SEGEMENT - */
@@ -431,11 +439,11 @@ select Tag , COUNT(*) as nb
 from #allShowpad m
 		inner join #IsContent c on ( m.[id] = c.astF_idHash)
 where Tag   IN ( 'Customers Interests'
-													,'Civil Markets'
-													,'New Digital Offers'
-													,'Solutions Portfolio'
-													,'Defence Markets'
-													,'Worldwide Credentials' )
+				,'Channel Civil Markets'
+				,'New Digital Offers'
+				,'Solutions Portfolio'
+				,'Channel Defence Markets'
+				,'Worldwide Credentials' )
 group by Tag
 order by 1 
 
@@ -457,6 +465,7 @@ where Tag IN  ( select distinct ctTyp_name from rfd.vw_DIM_CONTENT_TYPE_PAGE_TYP
 group by Tag
 order by 1 
 
+
 -----------------------------------------------------------------------------------------------------------------
 /***************** Contrôle depuis les exports de Showpad *****************/
 select distinct id , [asset name] from #allShowpad m left join #IsContent c on ( m.[id] = c.astF_idHash)
@@ -468,6 +477,9 @@ id	asset name
 8ca42cd1113e8666362ffd20ce993e08	InControl_Package.zip
 db4ae71200d1d2729cbb55643c806e1d	Thales FlytX helicopter retrofit.gif
 */
+
+select *  from #allShowpad where Tag = 'Group'
+
 drop table #allShowpad_02_Kpis_Elementaires
 
 --select  Tag , max( unit_isWorldwideCredentials )
@@ -493,6 +505,11 @@ drop table #allShowpad_02_Kpis_Elementaires
 						then 1
 						else 0
 				end		as unit_isBl ,
+
+				case when m.Tag = 'Group'
+						then 1
+						else 0
+				end		as unit_isGroup ,
 
 				case when m.Tag in ( select distinct astSgmtC_segment from rfd.vw_DIM_ASSETS_SEGMENT where astSgmt_segmentId <> -1  )
 						then 1
@@ -534,30 +551,86 @@ drop table #allShowpad_02_Kpis_Elementaires
 						else 0
 				end		as unit_isRegion,
 
-				case when m.Tag in ( 'Country Page' )
+				case when m.Tag in ( select distinct ctTyp_name from rfd.vw_DIM_CONTENT_TYPE_PAGE_TYPE where ctTyp_id is NULL )
+						then 1
+						else 0
+				end		as unit_isLandingPage ,
+
+				----------------
+				case when m.Tag = 'Country Page'
 						then 1
 						else 0
 				end		as unit_isCountryPage ,
 
+				case when m.Tag = 'Mission Page'
+						then 1
+						else 0
+				end		as unit_isMissionPage ,
+
+				case when m.Tag = 'Overview Page'
+						then 1
+						else 0
+				end		as unit_isOverviewPage ,
+
+				case when m.Tag = 'Persona Page'
+						then 1
+						else 0
+				end		as unit_isPersonaPage ,
+
+				case when m.Tag = 'Topics of Interests Page'
+						then 1
+						else 0
+				end		as unit_isTopicsOfInterestsPage ,
+				----------------
+
+				case when m.Tag in ( 'Customers Interests'
+										,'Channel Civil Markets'
+										--
+										,'New Digital Offers'
+										--
+										,'Solutions Portfolio'
+										,'Channel Defence Markets'
+										,'Worldwide Credentials' )
+						then 1
+						else 0
+				end		as unit_isChannel ,
+
+				----------------
 				case when m.Tag in ( 'Worldwide Credentials' )
 						then 1
 						else 0
 				end		as unit_isWorldwideCredentials ,
-
-				case when m.Tag in ( select distinct ctTyp_name from rfd.vw_DIM_CONTENT_TYPE_PAGE_TYPE where ctTyp_id is NULL )
+				
+				case when m.Tag  = 'Customers Interests'
 						then 1
 						else 0
-				end		as unit_isLandingPage,
+				end		as unit_isChannelCustomersInterests ,
 
-				case when m.Tag in ( 'Customers Interests'
-										,'Civil Markets'
-										,'New Digital Offers'
-										,'Solutions Portfolio'
-										,'Defence Markets'
-										,'Worldwide Credentials' )
+				case when m.Tag = 'Channel Civil Markets'
 						then 1
 						else 0
-				end		as unit_isChannel
+				end		as unit_isChannelCivilMarkets ,
+
+				case when m.Tag = 'New Digital Offers'
+						then 1
+						else 0
+				end		as unit_isChannelNewDigitalOffers ,
+
+				case when m.Tag = 'Solutions Portfolio'
+						then 1
+						else 0
+				end		as unit_isChannelSolutionsPortfolio ,
+
+				case when m.Tag = 'Channel Defence Markets'
+						then 1
+						else 0
+				end		as unit_isChannelDefenceMarkets ,
+				----------------
+
+				case when m.Tag in ( SELECT distinct tcHrchy_tagName FROM rfd.vw_DIM_CATEGORIES_HIERARCHY_TAG  WHERE tcHrchy_tagCategoryName = 'Persona'  )
+						then 1
+						else 0
+				end		as unit_isPersona
 
 		into #allShowpad_02_Kpis_Elementaires
 		from #allShowpad m inner join #IsContent c on ( m.[id] = c.astF_idHash) /*exclure raw et audo */ 
@@ -566,7 +639,7 @@ drop table #allShowpad_02_Kpis_Elementaires
 --group by Tag
 --order by 2 desc , 1
 
-select top 1000 * from #allShowpad_02_Kpis_Elementaires
+select top 1000 * from #allShowpad_02_Kpis_Elementaires where unit_isGroup = 1
 
 
 drop table if exists zzz_allShowpad_02_Kpis_Elementaires
@@ -574,7 +647,7 @@ drop table if exists zzz_allShowpad_02_Kpis_Elementaires
 select *
 into zzz_allShowpad_02_Kpis_Elementaires
 from #allShowpad_02_Kpis_Elementaires
--- 51729
+-- 61475
 
 drop table if exists #allShowpad_03_Kpis_elementaires_max
 
@@ -589,6 +662,9 @@ select  s.id 	, [asset name] ,		authors ,	ast_id ,	astF_idHash , listAuthorsSort
 			MAX(unit_isDgdi) AS unit_isDgdi , 
 			MAX(unit_isGbu) AS unit_isGbu , 
 			MAX(unit_isBl) AS unit_isBl , 
+
+			MAX(unit_isGroup) AS unit_isGroup ,
+
 			MAX(unit_isMarketSegment) AS unit_isMarketSegment , 
 			cMarketSegment ,
 
@@ -613,17 +689,32 @@ select  s.id 	, [asset name] ,		authors ,	ast_id ,	astF_idHash , listAuthorsSort
 			MAX(unit_isRegion) AS unit_isRegion , 
 			cRegion ,
 
-			MAX(unit_isCountryPage) AS unit_isCountryPage ,
+			MAX(unit_isCountryPage)				AS unit_isCountryPage ,
 			cCountryPage , 
+			MAX(unit_isMissionPage)				AS unit_isMissionPage ,
+			MAX(unit_isOverviewPage)			AS unit_isOverviewPage ,
+			MAX(unit_isPersonaPage)				AS unit_isPersonaPage ,
+			MAX(unit_isTopicsOfInterestsPage)	AS unit_isTopicsOfInterestsPage ,		
 
-			MAX(unit_isWorldwideCredentials) AS unit_isWorldwideCredentials , 
-			cWorldwideCredentials ,
 
 			MAX(unit_isLandingPage) AS unit_isLandingPage , 
 			cLandingPage ,
  
 			MAX(unit_isChannel) AS unit_isChannel ,
-			cChannel 
+			cChannel ,
+
+			MAX(unit_isWorldwideCredentials) AS unit_isWorldwideCredentials , 
+			cWorldwideCredentials ,
+			
+			MAX(unit_isChannelCustomersInterests)		AS unit_isChannelCustomersInterests ,
+			MAX(unit_isChannelCivilMarkets)				AS unit_isChannelCivilMarkets ,
+			MAX(unit_isChannelNewDigitalOffers)			AS unit_isChannelNewDigitalOffers ,
+			MAX(unit_isChannelSolutionsPortfolio)		AS unit_isChannelSolutionsPortfolio ,
+			MAX(unit_isChannelDefenceMarkets)			AS unit_isChannelDefenceMarkets ,
+
+			MAX(unit_isPersona)							AS unit_isPersona
+			
+
 into  #allShowpad_03_Kpis_elementaires_max 
 from zzz_allShowpad_02_Kpis_Elementaires s
 		left outer join ( 
@@ -754,20 +845,31 @@ from zzz_allShowpad_02_Kpis_Elementaires s
 									FROM #allShowpad_02_Kpis_Elementaires
 									where unit_isLargeCountries = 1 OR 
 											unit_isDgdi = 1 OR 
+
 											unit_isGbu = 1 OR 
 											unit_isBl = 1 OR 
+
 											unit_isMarketSegment = 1 OR 
 											unit_isMarketSubSegment = 1 OR 
+
 											unit_isProductLine = 1 OR 
 											unit_isProductName = 1 OR 
+
 											unit_isContentType = 1 OR 
 											unit_isSensitivity = 1 OR 
+
 											unit_isCountry = 1 OR 
 											unit_isRegion = 1 OR 
-											unit_isCountryPage = 1 OR 
-											unit_isWorldwideCredentials = 1 OR 
+
+											--unit_isCountryPage = 1 OR 
+
 											unit_isLandingPage = 1 OR 
-											unit_isChannel = 1  
+
+											unit_isWorldwideCredentials = 1 OR 
+											unit_isChannelCustomersInterests = 1 OR 
+											unit_isChannelCivilMarkets = 1 OR 
+											unit_isChannelNewDigitalOffers = 1
+
 								) AS G
 								GROUP BY id
 						) manda	on s.id = manda.id  			
@@ -782,9 +884,9 @@ from zzz_allShowpad_02_Kpis_Elementaires s
 						) allTags	on s.id = allTags.id  	
 				
 --where s.id = '026748d28e866c986997886353591c53'
-group by  s.id , [asset name] ,		authors ,	ast_id ,	astF_idHash , cMarketSegment , cSubMarketSegment , cProductLine , cProductName , cContentType , cSensitivity , cCountry , cRegion , cCountryPage , cWorldwideCredentials
+group by  s.id , [asset name] ,	authors ,	ast_id ,	astF_idHash , cMarketSegment , cSubMarketSegment , cProductLine , cProductName , cContentType , cSensitivity , cCountry , cRegion , cCountryPage , cWorldwideCredentials
 , cLandingPage , cChannel , [asset name] , cOnlyMandatoryTags , cAllTags , listAuthorsSortedShowpad
--- 6296 -- 6300
+-- 6206
 
 select * from #allShowpad_03_Kpis_elementaires_max
 
@@ -792,44 +894,125 @@ drop table if exists #allShowpad_04_Kpis_cheminTaggingFullValide
 
 select * ,
 
-IIF( unit_isGbu = 1 AND unit_isBl = 1 AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 AND unit_isProductLine = 1 AND unit_isProductName = 1 AND unit_isContentType = 1 AND unit_isSensitivity= 1 , 1 , 0)
-	AS pathTagging_isAsset ,
+	--IIF( unit_isGbu = 1 AND unit_isBl = 1 AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 AND unit_isProductLine = 1 AND unit_isProductName = 1 AND unit_isContentType = 1 AND unit_isSensitivity= 1 , 1 , 0)
+	--	AS pathTagging_isAsset ,
 
-IIF( unit_isGbu = 1 AND unit_isBl = 1 AND unit_isChannel = 1 AND unit_isLandingPage = 1 , 1 , 0)
-	AS pathTagging_isLandingPage ,
+	IIF( unit_isGbu = 1 AND unit_isContentType = 1 AND unit_isSensitivity= 1 , 1 , 0)
+		AS pathTagging_isAssetGbu ,
 
-IIF( unit_isDgdi = 1 AND unit_isContentType = 1 AND unit_isSensitivity= 1 AND unit_isCountry = 1 AND unit_isRegion = 1 , 1 , 0)
-	AS pathTagging_isCountryFactsheet ,
+	IIF( unit_isGbu = 1 AND unit_isBl = 1 
+		AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 
+		AND unit_isProductLine = 1 AND unit_isProductName = 1 
+		AND unit_isContentType = 1 AND unit_isSensitivity= 1 , 1 , 0)
+		AS pathTagging_isAssetBL ,
 
-IIF( unit_isDgdi = 1 AND unit_isCountry = 1 AND unit_isRegion = 1 AND unit_isWorldwideCredentials = 1 AND unit_isCountryPage = 1  , 1 , 0)
-	AS pathTagging_isCountryPageDGDI,
+	IIF( unit_isLargeCountries = 1 
+		AND unit_isContentType = 1 AND unit_isSensitivity= 1
+		AND unit_isCountry = 1 AND unit_isRegion = 1 , 1 , 0)
+		AS pathTagging_isAsset_LargeCountries ,
 
-IIF( unit_isLargeCountries = 1 AND unit_isCountry = 1 AND unit_isRegion = 1 AND unit_isWorldwideCredentials = 1 AND unit_isCountryPage = 1  , 1 , 0)
-	AS pathTagging_isCountryPageLargeCountry
+	IIF( unit_isDgdi = 1 
+		AND unit_isContentType = 1 AND unit_isSensitivity= 1
+		AND unit_isCountry = 1 AND unit_isRegion = 1 , 1 , 0)
+		AS pathTagging_isAsset_DGDI ,
+
+	IIF( unit_isLargeCountries = 1 
+		AND unit_isCountryPage = 1 
+		AND unit_isCountry = 1 AND unit_isRegion = 1 
+		AND unit_isWorldwideCredentials = 1 
+		 , 1 , 0)
+		AS pathTagging_isCountryPage_LargeCountries ,
+
+	IIF( unit_isLargeCountries = 1 
+		AND unit_isPersonaPage = 1
+		AND unit_isPersona = 1 
+		AND unit_isChannelCustomersInterests = 1 , 1 , 0)
+		AS pathTagging_isPersonaPage_LargeCountries ,
+
+	IIF( unit_isLargeCountries = 1 
+		AND unit_isContentType = 1 AND unit_isSensitivity= 1 
+		AND unit_isCountry = 1 AND unit_isRegion = 1 , 1 , 0)
+		AS pathTagging_isCountryFactsheet_LargeCountries ,
+
+	IIF( unit_isDgdi = 1 
+		AND unit_isCountryPage = 1
+		AND unit_isCountry = 1 AND unit_isRegion = 1 
+		AND unit_isWorldwideCredentials = 1 , 1 , 0)
+		AS pathTagging_isCountryPage_DGDI,
+
+	IIF( unit_isGroup = 1 , 1 , 0)
+		AS pathTagging_isGroup ,
+
+	---- Pages ----
+	IIF( unit_isGbu = 1 AND unit_isBl = 1 
+		AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 
+		AND unit_isOverviewPage = 1
+		AND ( unit_isChannelCivilMarkets + unit_isChannelDefenceMarkets = 1 
+				AND unit_isChannelCustomersInterests + unit_isChannelNewDigitalOffers + unit_isChannelSolutionsPortfolio = 0 ) , 1 , 0)
+		AS pathTagging_isGbuBL_OverviewPage ,
+
+	IIF( unit_isGbu = 1 AND unit_isBl = 1 
+		AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 
+		AND unit_isMissionPage = 1
+		AND ( unit_isChannelCivilMarkets + unit_isChannelDefenceMarkets = 1 
+				AND unit_isChannelCustomersInterests + unit_isChannelNewDigitalOffers + unit_isChannelSolutionsPortfolio = 0 ) , 1 , 0)
+		AS pathTagging_isGbuBL_MissionPage ,
+
+	IIF( unit_isGbu = 1 AND unit_isBl = 1 
+		AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 
+		AND unit_isPersonaPage = 1
+		AND ( unit_isChannelCustomersInterests = 1 
+				AND unit_isChannelCivilMarkets + unit_isChannelDefenceMarkets + unit_isChannelNewDigitalOffers + unit_isChannelSolutionsPortfolio = 0 ) , 1 , 0)
+		AS pathTagging_isGbuBL_PersonaPage ,
+
+	IIF( unit_isGbu = 1 AND unit_isBl = 1 
+		AND unit_isMarketSegment = 1 AND unit_isMarketSubSegment = 1 
+		AND unit_isTopicsOfInterestsPage = 1
+		AND ( unit_isChannelCivilMarkets + unit_isChannelDefenceMarkets = 1 
+				AND unit_isChannelCustomersInterests + unit_isChannelNewDigitalOffers + unit_isChannelSolutionsPortfolio = 0 ) , 1 , 0)
+		AS pathTagging_isGbuBL_TopicsOfInterestsPagee 
+	---------------
 
 into  #allShowpad_04_Kpis_cheminTaggingFullValide
 from #allShowpad_03_Kpis_elementaires_max
 
 select * from #allShowpad_04_Kpis_cheminTaggingFullValide
 
-select pathTagging_isAsset ,
-		pathTagging_isLandingPage	 ,
-		pathTagging_isCountryFactsheet	 ,
-		pathTagging_isCountryPageDGDI	 ,
-		pathTagging_isCountryPageLargeCountry
-		 , COUNT(*) as nb 
- from #allShowpad_04_Kpis_cheminTaggingFullValide
- group by  pathTagging_isAsset ,
-		pathTagging_isLandingPage	 ,
-		pathTagging_isCountryFactsheet	 ,
-		pathTagging_isCountryPageDGDI	 ,
-		pathTagging_isCountryPageLargeCountry
+select	pathTagging_isAssetGbu , 
+		pathTagging_isAssetBL , 
+		pathTagging_isAsset_LargeCountries , 
+		pathTagging_isAsset_DGDI , 
+		pathTagging_isCountryPage_LargeCountries , 
+		pathTagging_isPersonaPage_LargeCountries , 
+		pathTagging_isCountryFactsheet_LargeCountries , 
+		pathTagging_isCountryPage_DGDI , 
+		pathTagging_isGroup , 
+		pathTagging_isGbuBL_OverviewPage , 
+		pathTagging_isGbuBL_MissionPage , 
+		pathTagging_isGbuBL_PersonaPage , 
+		pathTagging_isGbuBL_TopicsOfInterestsPagee , 
+		COUNT(*) as nb 
+
+from #allShowpad_04_Kpis_cheminTaggingFullValide
+group by	pathTagging_isAssetGbu , 
+			pathTagging_isAssetBL , 
+			pathTagging_isAsset_LargeCountries , 
+			pathTagging_isAsset_DGDI , 
+			pathTagging_isCountryPage_LargeCountries , 
+			pathTagging_isPersonaPage_LargeCountries , 
+			pathTagging_isCountryFactsheet_LargeCountries , 
+			pathTagging_isCountryPage_DGDI , 
+			pathTagging_isGroup , 
+			pathTagging_isGbuBL_OverviewPage , 
+			pathTagging_isGbuBL_MissionPage , 
+			pathTagging_isGbuBL_PersonaPage , 
+			pathTagging_isGbuBL_TopicsOfInterestsPagee 
 
 
 drop table if exists #allShowpad_05_Kpis_atLeastOneValidTaggingPath
 
-select * , IIF(  pathTagging_isAsset + pathTagging_isLandingPage + 	pathTagging_isCountryFactsheet + pathTagging_isCountryPageDGDI + pathTagging_isCountryPageLargeCountry > 0 , 1 , 0 ) /* Check un des 5 chemins Tagging 100% valide */
-			AS pathTagging_hasAtLeastOneValidPath
+select * --, IIF(  pathTagging_isAsset + pathTagging_isLandingPage + 	pathTagging_isCountryFactsheet + pathTagging_isCountryPageDGDI + pathTagging_isCountryPageLargeCountry > 0 , 1 , 0 ) /* Check un des 5 chemins Tagging 100% valide */
+			--AS pathTagging_hasAtLeastOneValidPath
 into #allShowpad_05_Kpis_atLeastOneValidTaggingPath
 from #allShowpad_04_Kpis_cheminTaggingFullValide
 
