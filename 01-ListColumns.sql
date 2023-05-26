@@ -42,7 +42,7 @@ Ordered by schema, table name, column id
 /*
 Fetch Column Names of Table using SQL Query
 The INFORMATION_SCHEMA.COLUMNS table returns information about all columns within a Database. A SELECT statement needs to be executed over the table and the Table Name whose Column names needs to be fetched is displayed in WHERE clause.
-Syntax
+
 */
 SELECT COLUMN_NAME
 FROM INFORMATION_SCHEMA.COLUMNS
@@ -50,3 +50,9 @@ WHERE TABLE_NAME = 'Your Table Name'
 ORDER BY ORDINAL_POSITION
 
 -----------------------------------------------
+/*
+Fetch Column Names of Table using Stored Procedure
+The System Stored Procedure sp_columns returns Column names with additional information from the Database table in SQL Server.
+*/
+
+EXEC sp_columns 'Your Table Name'
